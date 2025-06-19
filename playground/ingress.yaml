@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-ingress
+  namespace: playground
+spec:
+  rules:
+    - host: k8s-playground.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web-service
+                port:
+                  number: 80

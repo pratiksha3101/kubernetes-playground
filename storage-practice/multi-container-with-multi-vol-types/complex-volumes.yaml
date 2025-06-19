@@ -1,0 +1,98 @@
+# This Pod simulates a full Nginx-based web server with live content updates and log processing.
+# ConfigMap provides nginx config, Secret stores SSL keys, PVC stores HTML content, and emptyDirs handle logs/cache.
+# Three containers collaborate using shared volumes to create a modular, real-world-like architecture.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web-config
+data:
+  nginx.conf: |
+    server {
+        listen 80;
+        root /usr/share/nginx/html;
+        location / {
+            try_files $uri $uri/ =404;
+        }
+        location /logs {
+            alias /var/log/nginx;
+            autoindex on;
+        }
+    }
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: web-secret
+type: Opaque
+data:
+  ssl.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t  # dummy cert
+  ssl.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0t  # dummy key
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: web-content-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi-volume-pod
+spec:
+  containers:
+    - name: web-server
+      image: nginx:1.20
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx/conf.d
+        - name: secret-volume
+          mountPath: /etc/nginx/ssl
+          readOnly: true
+        - name: persistent-content
+          mountPath: /usr/share/nginx/html
+        - name: logs-volume
+          mountPath: /var/log/nginx
+        - name: cache-volume
+          mountPath: /var/cache/nginx
+
+    - name: log-processor
+      image: busybox
+      command: ['sh', '-c', 'while true; do wc -l /logs/*.log 2>/dev/null || echo "No logs yet"; sleep 30; done']
+      volumeMounts:
+        - name: logs-volume
+          mountPath: /logs
+
+    - name: content-updater
+      image: busybox
+      command: ['sh', '-c', 'while true; do echo "<h1>Updated: $(date)</h1>" > /content/index.html; sleep 60; done']
+      volumeMounts:
+        - name: persistent-content
+          mountPath: /content
+  
+  volumes:
+    - name: config-volume
+      configMap:
+        name: web-config
+    - name: secret-volume
+      secret:
+        secretName: web-secret
+        defaultMode: 0600
+    - name: persistent-content
+      persistentVolumeClaim:
+        claimName: web-content-pvc
+    - name: logs-volume
+      emptyDir: {}
+    - name: cache-volume
+      emptyDir:
+        sizeLimit: 100Mi

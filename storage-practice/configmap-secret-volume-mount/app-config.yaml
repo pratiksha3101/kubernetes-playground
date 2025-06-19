@@ -1,0 +1,39 @@
+# This ConfigMap stores app config files and is mounted in two ways:
+# One mount exposes all files in /etc/config, and another mounts only database.properties at /etc/database.
+# Useful when you want to share some config globally and restrict others to specific paths.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  database.properties: |
+    host=mysql.example.com
+    port=3306
+    database=myapp
+  app.conf: |
+    debug=false
+    max_connections=100
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-pod
+spec:
+  containers:
+    - name: app
+      image: busybox
+      command: ['sleep', '3600']
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+        - name: specific-config
+          mountPath: /etc/database
+          subPath: database.properties
+  volumes:
+    - name: config-volume
+      configMap:
+        name: app-config
+    - name: specific-config
+      configMap:
+        name: app-config

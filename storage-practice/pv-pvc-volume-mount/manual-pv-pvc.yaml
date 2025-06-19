@@ -1,0 +1,46 @@
+# This setup creates a PersistentVolume and a matching PersistentVolumeClaim.
+# A busybox Pod writes logs to /data, which maps to /tmp/manual-pv-data on the host.
+# The data persists even if the Pod is deleted, thanks to the hostPath and Retain policy.
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: manual-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /tmp/manual-pv-data
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: manual-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pv-pod
+spec:
+  containers:
+    - name: app
+      image: busybox
+      command: ['sh', '-c', 'while true; do echo "Data persisted: $(date)" >> /data/log.txt; sleep 10; done']
+      volumeMounts:
+        - name: persistent-storage
+          mountPath: /data
+  volumes:
+    - name: persistent-storage
+      persistentVolumeClaim:
+        claimName: manual-pvc

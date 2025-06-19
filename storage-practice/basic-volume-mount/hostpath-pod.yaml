@@ -1,0 +1,20 @@
+# This Pod runs a Nginx container and mounts a host directory to store logs.
+# Nginx writes logs to /var/log/nginx inside the container, which maps to /tmp/nginx-logs on the host.
+# This allows you to access container logs directly from the host system.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hostpath-pod
+spec:
+  containers:
+    - name: app
+      image: nginx
+      volumeMounts:
+        - name: host-logs
+          mountPath: /var/log/nginx
+  volumes:
+    - name: host-logs
+      hostPath:
+        path: /tmp/nginx-logs
+        type: DirectoryOrCreate

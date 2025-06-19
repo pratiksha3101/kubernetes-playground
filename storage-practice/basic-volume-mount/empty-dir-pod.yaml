@@ -1,0 +1,25 @@
+# This Pod runs two containers (writer and reader) that share data using an emptyDir volume.
+# The writer appends timestamps to a shared log file, while the reader reads and prints it.
+# VolumeMounts ensure both containers access the same /shared directory inside the Pod.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: shared-volume-pod
+spec:
+  containers:
+    - name: writer
+      image: busybox
+      command: ['sh', '-c', 'while true; do echo "Hello from writer: $(date)" >> /shared/log.txt; sleep 5; done']
+      volumeMounts:
+        - name: shared-storage
+          mountPath: /shared
+    - name: reader
+      image: busybox
+      command: ['sh', '-c', 'while true; do cat /shared/log.txt 2>/dev/null || echo "No file yet"; sleep 3; done']
+      volumeMounts:
+        - name: shared-storage
+          mountPath: /shared
+  volumes:
+    - name: shared-storage
+      emptyDir: {}

@@ -1,0 +1,30 @@
+# Define a PersistentVolume (PV) – a piece of actual storage in the cluster, independent of pods
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: app-pv  # Name of the PV
+spec:
+  capacity:
+    storage: 1Gi  # Total storage size of the volume
+  accessModes:
+    - ReadWriteOnce  # Can be mounted as read-write by only one node
+  persistentVolumeReclaimPolicy: Retain  # Keeps the volume data even if PVC is deleted
+  storageClassName: manual  # Custom storage class to match with PVC (not dynamic provisioning)
+  hostPath:
+    path: /data/app-storage  # The actual path on the Minikube VM where data will be stored
+
+---
+
+# Define a PersistentVolumeClaim (PVC) – a request for storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-pvc  # Name of the PVC
+  namespace: playground  # Namespace in which this PVC is created
+spec:
+  accessModes:
+    - ReadWriteOnce  # Needs the volume to allow read-write access from one node
+  resources:
+    requests:
+      storage: 1Gi  # Asking for 1Gi of storage space
+  storageClassName: manual  # Must match the storage class of the PV to bind successfully

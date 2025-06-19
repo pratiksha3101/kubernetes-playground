@@ -1,0 +1,64 @@
+# deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+  namespace: playground
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: web-content
+              mountPath: /usr/share/nginx/html  # nginx's default web directory
+            - name: storage
+              mountPath: /data
+          resources:
+            requests:
+              memory: "32Mi"  # = 32 * 1024 * 1024 bytes = ~33.55 MB
+              cpu: "10m"
+            limits:
+              memory: "64Mi" # 64 MiB = 64 * 1024 * 1024 bytes = ~67.11 MB
+              cpu: "50m"
+      volumes:
+        - name: web-content
+          configMap:
+            name: web-config
+        - name: storage
+          persistentVolumeClaim:
+            claimName: app-pvc
+
+# 🧠 STORAGE CONCEPT BREAKDOWN:
+#
+# 1. PV (PersistentVolume) = Physical storage space on the cluster
+#    - Like a "hard drive partition" that Kubernetes manages
+#    - Exists independently of pods
+#
+# 2. PVC (PersistentVolumeClaim) = Request for storage
+#    - Like saying "I need 1GB of storage please"
+#    - Gets bound to an available PV
+#
+# 3. Volume (in deployment) = Connection between PVC and pod
+#    - Says "use that claimed storage in this pod"
+#
+# 4. VolumeMount = Where storage appears inside container
+#    - Says "mount that volume at this path: /data"
+#
+# FLOW: PV → PVC → Volume → VolumeMount → Container sees /data folder
+#
+# 🔄 WHAT HAPPENS:
+# - ConfigMap volume: nginx serves HTML from /usr/share/nginx/html
+# - Persistent volume: anything written to /data survives pod restarts
+# - If pod dies → new pod starts → /data folder still has same data
+# - If you delete deployment → PV still exists with data
