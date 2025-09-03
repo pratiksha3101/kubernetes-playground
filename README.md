@@ -72,6 +72,7 @@ spec:
     - name: my-container
       image: nginx
 ```
+```
 # Enable ingress
 #  minikube addons enable ingress
 
@@ -83,3 +84,4 @@ spec:
 
 # Or use port-forward for quick access
 #  kubectl port-forward service/web-service 8080:80 -n playground
+```
